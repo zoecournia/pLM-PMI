@@ -1,0 +1,38 @@
+{
+  "train": [
+    "A1RA60",
+    "A0A0H2WZL3",
+    "A0A0H2UN19",
+    "A0A075B5H6",
+    "A1U5H9",
+    "A0A6N4SQ07",
+    "A0A0J9X278",
+    "A0A6N4SXV3",
+    "A0KKT0",
+    "A0A6N4SPL7",
+    "A0A0H2V2B5",
+    "A0A6N4SU23",
+    "A0FGR8",
+    "A0A1C9V3S9",
+    "A0A6L7H2E6",
+    "A1ZAW5",
+    "A2AR50",
+    "A0A0H2XIZ7",
+    "A3DHG6",
+    "A1JSS7"
+  ],
+  "test": [
+    "A3DK57",
+    "A4I5U9",
+    "A6KXE5",
+    "A6L916",
+    "A6LIT8"
+  ],
+  "val_dreamm": [
+    "O88339",
+    "P12104",
+    "O24592",
+    "P00720",
+    "Q96QK1"
+  ]
+}

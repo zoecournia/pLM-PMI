@@ -1,0 +1,43 @@
+from pymol import cmd,stored
+
+set depth_cue, 1
+set fog_start, 0.4
+
+set_color b_col, [36,36,85]
+set_color t_col, [10,10,10]
+set bg_rgb_bottom, b_col
+set bg_rgb_top, t_col
+set bg_gradient
+
+set  spec_power  =  200
+set  spec_refl   =  0
+
+load ".pdb", protein
+create ligands, protein and organic
+select xlig, protein and organic
+delete xlig
+
+hide everything, all
+
+color white, elem c
+color bluewhite, protein
+show_as cartoon, protein
+
+show sticks, ligands
+color magenta, ligands
+
+select TP
+color green, TP
+show licorice, TP
+
+select FP
+show licorice, FP
+color red, FP
+
+select FN
+show licorice, FN
+color yellow, FN
+
+deselect
+
+orient
