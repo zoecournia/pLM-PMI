@@ -1,4 +1,4 @@
-Using deep learning and large protein language models to predict protein-membrane interfaces of peripheral membrane proteins
+Using deep learning and large protein language models to predict protein-membrane interfaces of peripheral membrane proteins 
 
 The repository holds input files required to run the scripts for data preparation, feature extraction (embeddings of protein Language Models(pLM)), attention maps of pLMs investigation, and models training & Multi-layer Perceptron (MLP) fine tuning
 
