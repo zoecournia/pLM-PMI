@@ -1,4 +1,4 @@
-Written by Dimitra Paranou
+Written by Dimitra Paranou, August 2023
 
 Using deep learning and large protein language models to predict protein-membrane interfaces of peripheral membrane proteins 
 
