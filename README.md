@@ -1,6 +1,6 @@
 Written by Dimitra Paranou, August 2023
 
-Using deep learning and large protein language models to predict protein-membrane interfaces of peripheral membrane proteins 
+Using deep learning and large protein language models to predict protein-membrane interfaces of peripheral membrane proteins
 
 The repository holds input files required to run the scripts for data preparation, feature extraction (embeddings of protein Language Models(pLM)), attention maps of pLMs investigation, and models training & Multi-layer Perceptron (MLP) fine tuning
 
@@ -23,7 +23,8 @@ Contains several project's scripts.
 - explore_datasets.ipynb -> Explore and create the dataset files
 - get_proteins.py -> Scirpt for downloading proteins from Uniprot / PDB
 - ml_testing.py -> Testing of 4 Machine Learning (ML) classifiers - XGBoost, BalancedRandomForest, Single layer Perceptron, Multi layer Perceptron -
-- mlp_tune.ipynb -> Fine-tuning of MLP using Bayesian Optimization
+- mlp_tune.ipynb -> Fine-tuning of MLP using Bayesian Optimization and keras tuner
+- ml_tune.ipynb -> Fine-tuning of 4 ML classifiers - XGBoost, BalancedRandomForest, Single layer Perceptron, Multi layer Perceptron - using Optuna library
 
 **tuning_trial/**
 Contains the trial using Bayesian Optimization for fine-tuning the 4 MLP models
