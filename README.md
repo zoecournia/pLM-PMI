@@ -13,7 +13,7 @@ Contains the 2 datasets (DREAMM & PePr2DS) that we used to create our own, as we
 Contains the 4 best fine-tuned MLP models trained on protTrans and ESM embeddings.
 
 - 2 MLP models with 4 hidden layers (best_model_esm, best_model_protTrans)
-- 2 MLP models with 1 hidden layer (best_model_esm_sl, best_model_protTrans_sl)
+- 2 MLP models optimized with Optuna framework (best_model_esm_new, best_model_protTrans_new)
 
 **scripts/**
 Contains several project's scripts.
