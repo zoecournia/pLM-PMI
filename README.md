@@ -27,7 +27,7 @@ Contains several project's scripts.
 - ml_tune.ipynb -> Fine-tuning of 4 ML classifiers - XGBoost, BalancedRandomForest, Single layer Perceptron, Multi layer Perceptron - using Optuna library
 
 **tuning_trial/**
-Contains the trial using Bayesian Optimization for fine-tuning the 4 MLP models
+Contains the trial using Bayesian Optimization for fine-tuning the 2 MLP models (best_model_esm, best_model_protTrans)
 
 **visualization/**
 Contains the files for creating visualization scripts (.pymol) and visualize the predictions of models (TP, FP, FN)
