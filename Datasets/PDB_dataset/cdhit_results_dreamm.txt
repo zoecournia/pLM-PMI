@@ -1,0 +1,100 @@
+>Cluster 0
+0	272aa, >1SDD_A... at 40.07%
+1	698aa, >2R7E_A... *
+>Cluster 1
+0	669aa, >2FNQ_A... *
+>Cluster 2
+0	662aa, >2P0M_A... *
+>Cluster 3
+0	633aa, >1CJY_A... *
+>Cluster 4
+0	553aa, >2AYL_A... *
+>Cluster 5
+0	513aa, >3FSN_A... *
+>Cluster 6
+0	471aa, >1PFO_A... *
+>Cluster 7
+0	370aa, >1GYG_A... *
+>Cluster 8
+0	326aa, >1C1Z_A... *
+>Cluster 9
+0	316aa, >1ANX_A... *
+>Cluster 10
+0	316aa, >1DK5_A... *
+>Cluster 11
+0	296aa, >2PTD_A... *
+>Cluster 12
+0	288aa, >2DDR_A... *
+>Cluster 13
+0	269aa, >2A1L_A... *
+>Cluster 14
+0	266aa, >1OIZ_A... *
+>Cluster 15
+0	260aa, >1ES6_A... *
+>Cluster 16
+0	217aa, >1DVP_A... *
+1	67aa, >1VFY_A... at 43.28%
+>Cluster 17
+0	217aa, >3IIQ_A... *
+>Cluster 18
+0	206aa, >3RZN_A... *
+>Cluster 19
+0	199aa, >1JSS_A... *
+>Cluster 20
+0	175aa, >1GWY_A... at 93.14%
+1	175aa, >1IAZ_A... at 65.71%
+2	176aa, >2KS4_A... *
+>Cluster 21
+0	160aa, >1CZS_A... *
+>Cluster 22
+0	158aa, >1H0A_A... *
+>Cluster 23
+0	150aa, >4V11_A... *
+>Cluster 24
+0	147aa, >5F0P_C... *
+>Cluster 25
+0	143aa, >1H6H_A... *
+>Cluster 26
+0	137aa, >1NL1_A... *
+>Cluster 27
+0	136aa, >1KQ6_A... *
+>Cluster 28
+0	135aa, >1GMI_A... *
+>Cluster 29
+0	134aa, >1POC_A... *
+>Cluster 30
+0	133aa, >4DNL_A... *
+>Cluster 31
+0	133aa, >4X08_A... *
+>Cluster 32
+0	129aa, >1HN4_A... *
+1	118aa, >1POA_A... at 55.93%
+2	127aa, >5G3N_A... at 40.94%
+>Cluster 33
+0	128aa, >2K45_A... *
+>Cluster 34
+0	123aa, >1VAP_A... at 66.67%
+1	124aa, >4HG9_A... *
+>Cluster 35
+0	123aa, >1JOC_A... *
+>Cluster 36
+0	104aa, >1EAZ_A... *
+>Cluster 37
+0	100aa, >1FAO_A... *
+>Cluster 38
+0	94aa, >2RSG_A... *
+>Cluster 39
+0	77aa, >2E73_A... *
+>Cluster 40
+0	66aa, >1TBN_A... *
+1	65aa, >3UEJ_A... at 49.23%
+>Cluster 41
+0	60aa, >1FFJ_A... *
+>Cluster 42
+0	52aa, >1FAQ_A... *
+>Cluster 43
+0	34aa, >1LA4_A... *
+>Cluster 44
+0	34aa, >1S6X_A... *
+>Cluster 45
+0	33aa, >2MH1_A... *
