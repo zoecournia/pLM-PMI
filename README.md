@@ -33,9 +33,9 @@ Contains several project's scripts.
 
 For the case of Uniprot sequences, to predict new proteins using the MLP models:
 
-1. Edit the _proteins.json file_ in the **extra_proteins** folder where you set the Uniprot code and the matching PDB code and chain id for the visualization
-2. In the **examine_new_proteins.py** set the _model_name_ to be ESM or protTrans that define the language model that toy want to use and then set the _num_features_ to be 1024 or 1280 according to the pLM that you selected.
+1. Edit the _proteins.json file_ in the **extra_proteins** folder where you set the Uniprot code and the matching PDB code and chain id for the visualization.
+2. In the **examine_new_proteins.py** set the _model_name_ to be esm or protTrans that defines the language model that you want to use and then set the _num_features_ to be 1024 or 1280 according to the pLM that you selected.
 
 For the case of PDB sequences, to predict new proteins using the LGBM models:
 
-1. Edit the _mode_ to be 'predict_new_proteins', set the _mlp_model_ with the desire pLM model, and add the PDB codes in the variable _new_proteins_ of the **dataset-pdb.py** script.
+1. Edit the _mode_ to be 'predict_new_proteins', set the _mlp_model_ with the desire pLM model (esm or protTrans), and add the PDB codes in the variable _new_proteins_ that you want to examine in the **dataset-pdb.py** script.
