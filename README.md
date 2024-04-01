@@ -17,6 +17,7 @@ Contains the 4 best fine-tuned MLP models trained on protTrans and ESM embedding
 
 - 2 MLP models with 4 hidden layers (best_model_esm, best_model_protTrans)
 - 2 MLP models optimized with Optuna framework (best_model_esm_new, best_model_protTrans_new)
+- 2 LGBM models trianed on PDB datasets optimized with Optuna framework
 
 **scripts/**
 Contains several project's scripts.
@@ -27,3 +28,14 @@ Contains several project's scripts.
 - get_proteins.py -> Scirpt for downloading proteins from Uniprot / PDB
 - ml_tune.ipynb -> Fine-tuning of 5 ML classifiers - LGBM, XGBoost, BalancedRandomForest, Single layer Perceptron, Multi layer Perceptron - using Optuna library
 - pairwise_seq_ident.py -> Create a file with the alignments of proteins
+
+### How to run the scripts
+
+For the case of Uniprot sequences, to predict new proteins using the MLP models:
+
+1. Edit the _proteins.json file_ in the **extra_proteins** folder where you set the Uniprot code and the matching PDB code and chain id for the visualization
+2. In the **examine_new_proteins.py** set the _model_name_ to be ESM or protTrans that define the language model that toy want to use and then set the _num_features_ to be 1024 or 1280 according to the pLM that you selected.
+
+For the case of PDB sequences, to predict new proteins using the LGBM models:
+
+1. Edit the _mode_ to be 'predict_new_proteins', set the _mlp_model_ with the desire pLM model, and add the PDB codes in the variable _new_proteins_ of the **dataset-pdb.py** script.

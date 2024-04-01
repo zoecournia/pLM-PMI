@@ -5,6 +5,7 @@ from Bio.PDB import *
 from tqdm import tqdm
 import os
 import optuna
+import joblib
 
 from transformers import T5Tokenizer, T5EncoderModel, EsmTokenizer, EsmModel
 import torch
@@ -13,11 +14,8 @@ import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, matthews_corrcoef, confusion_matrix
 
-from attentions import create_att_maps_df, create_col_names, format_attention_maps
-
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
-
 
 has_gpu = torch.cuda.is_available()
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -27,6 +25,7 @@ amino_acids_3l_key = {"ARG":"R", "HIS":"H", "LYS":"K", "ASP":"D", "GLU":"E", "SE
 amino_acids_1l_key = {'R': 'ARG', 'H': 'HIS', 'K': 'LYS', 'D': 'ASP', 'E': 'GLU', 'S': 'SER', 'T': 'THR', 'N': 'ASN', 'Q': 'GLN', 'C': 'CYS', 'U': 'SEC', 'G': 'GLY', 'P': 'PRO', 'A': 'ALA', 'V': 'VAL', 'I': 'ILE', 'L': 'LEU', 'M': 'MET', 'F': 'PHE', 'Y': 'TYR', 'W': 'TRP'}
 amino_acids = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'SEC', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
 
+
 """
 Mode -> Functionalities of script
 
@@ -34,14 +33,15 @@ Mode -> Functionalities of script
 2. create_fasta_file
 3. filter_proteins
 4. generate_embeddings
-5. generate_attentions
-6. train_algorithm
-7. predict_extra_proteins
+5. train_algorithm
+6. predict_new_proteins
 """
-mode = 'predict_extra_proteins'
+mode = 'predict_new_proteins'
 mlp_model = 'protTrans' # esm, protTrans
 dataset_type = 'all' # all, dreamm
-dataset_att_type = 'mean'
+
+# Define the PDB codes of the new proteins for which we want to predict the membrane binding residues
+new_proteins = ['5EDM']
 
 """
 Read the PePrd2DS dataset and appropriatly format the data
@@ -85,10 +85,44 @@ def read_dreamm(file_path):
   return dreamm_df
 
 """
+Create dataframe with sequences of new proteins
+"""
+def get_proteins_sequences(pdb_list):
+  dataset = pd.DataFrame()
+
+  for pdb in pdb_list:
+      pdbl = PDBList()
+      pdbl.retrieve_pdb_file(pdb, pdir = 'pdbs/', file_format = 'pdb')
+
+      parser = PDBParser(PERMISSIVE = True, QUIET = True) 
+      data = parser.get_structure(pdb.lower(),"pdbs/pdb"+pdb.lower()+".ent")
+
+      models = list(data.get_models())
+      chains = list(models[0].get_chains()) 
+      for chain in chains:
+          residues = list(chain.get_residues())
+
+          for residue in residues:
+              # check that the residue is an amino acid and if the residue number and residue name are in the merged dataset - if not, add it
+              if residue.get_resname() in amino_acids :
+                  new_row_df = pd.DataFrame({'pdb': pdb, 'chain_id': chain.get_id(), 'residue_name': residue.get_resname(), 'residue_number': residue.get_id()[1], 'label': False}, index=[0])
+                  dataset = pd.concat([dataset, new_row_df], ignore_index=True)
+
+  # sort the dataset by pdb, chain_id and residue_number
+  dataset = dataset.sort_values(['pdb', 'chain_id', 'residue_number']).reset_index(drop=True)
+
+  return dataset
+
+"""
 Read dataset from csv file
 """
 def load_dataset(file_path, index_col=None):
   return pd.read_csv(file_path, dtype={"pdb": str}, index_col=index_col)
+
+def load_ml_model(path):
+  # load the model from disk
+  loaded_model = joblib.load(path)
+  return loaded_model
 
 """
 Concatenate the PePrd2DS and DREAMM datasets
@@ -151,40 +185,6 @@ def add_false_labels(dataset):
 
     return dataset
 
-def get_proteins_sequences(pdbs):
-    dataset = pd.DataFrame(columns=['pdb', 'chain_id', 'residue_number', 'residue_name', 'residue_1l'])
-
-    for pdb in pdbs:
-        pdbl = PDBList()
-        pdbl.retrieve_pdb_file(pdb, pdir = 'pdbs/', file_format = 'pdb')
-
-        parser = PDBParser(PERMISSIVE = True, QUIET = True) 
-        data = parser.get_structure(pdb.lower(),"pdbs/pdb"+pdb.lower()+".ent")
-
-        models = list(data.get_models())
-        chains = list(models[0].get_chains()) 
-        for chain in chains:
-            residues = list(chain.get_residues())
-
-            # get only chain A
-            if chain.get_id() != "A" :
-                continue
-            
-            for residue in residues:
-                # check that the residue is an amino acid and if the residue number and residue name are in the merged dataset - if not, add it
-                if residue.get_resname() in amino_acids and \
-                dataset[(dataset['pdb'] == pdb) & 
-                              (dataset['chain_id'] == chain.get_id()) & 
-                              (dataset['residue_number'] == residue.get_id()[1]) & 
-                              (dataset['residue_name'] == residue.get_resname())].empty:
-                    new_row_df = pd.DataFrame({'pdb': pdb, 'chain_id': chain.get_id(), 'residue_name': residue.get_resname(), 'residue_1l': amino_acids_3l_key[residue.get_resname()],'residue_number': residue.get_id()[1]}, index=[0])
-                    dataset = pd.concat([dataset, new_row_df], ignore_index=True)
-
-    # sort the dataset by pdb, chain_id and residue_number
-    dataset = dataset.sort_values(['pdb', 'chain_id', 'residue_number']).reset_index(drop=True)
-
-    return dataset
-   
 """
 Create the fasta file for the dataset filtering using the CDHIT tool
 """
@@ -373,7 +373,7 @@ def generate_pymols(df, is_extra_proteins=False):
         with open(project_path + '/visualization_scripts/test_proteins_pdb_' + mlp_model + '/' + protein + '.pml', 'w') as file:
             file.write(content)
       
-def train_classifier(dataset):
+def train_classifier(dataset, save_model=False):
   all_proteins = dataset.pdb.unique()
 
   dreamm_proteins = ['1JOC', '1VFY', '1H0A', '1IAZ', '2AYL', '1GYG', '2P0M', '2FNQ', '3IIQ', '1PFO',
@@ -384,14 +384,13 @@ def train_classifier(dataset):
 
   # split number of proteins
   train_proteins, test_proteins = train_test_split(proteins, test_size=0.2, random_state=42)
-  # train_proteins, test_proteins = train_test_split(all_proteins, test_size=0.2, random_state=42)
   test_proteins, val_proteins = train_test_split(test_proteins, test_size=0.5, random_state=42)
 
   df_train = dataset[dataset.pdb.isin(train_proteins)]
   df_test = dataset[dataset.pdb.isin(test_proteins)]
   df_val = dataset[dataset.pdb.isin(val_proteins)]
   df_extra = dataset[dataset.pdb.isin(dreamm_proteins)]
- 
+
   X_train, y_train = df_train.drop(['pdb', 'residue_1l', 'residue_number', 'chain_id', 'label'], axis=1, inplace=False).to_numpy(), df_train['label'].values
   X_test, y_test = df_test.drop(['pdb', 'residue_1l', 'residue_number', 'chain_id', 'label'], axis=1, inplace=False).to_numpy(), df_test['label'].values
   X_val, y_val = df_val.drop(['pdb', 'residue_1l', 'residue_number', 'chain_id', 'label'], axis=1, inplace=False).to_numpy(), df_val['label'].values
@@ -399,7 +398,7 @@ def train_classifier(dataset):
 
   ratio = df_train.label.value_counts()[0]/df_train.label.value_counts()[1]
   
-  # 1. Define an objective function to be maximized.
+  # Define the objective function to be maximized.
   def objective(trial):
       
       params = {
@@ -433,7 +432,7 @@ def train_classifier(dataset):
       # trials[trial.number] = [f1, mcc, conf_matrix]    
       return f1
 
-  # 3. Create a study object and optimize the objective function.
+  # Create a study object and optimize the objective function.
   study = optuna.create_study(direction='maximize')
   study.optimize(objective, n_trials=200)
 
@@ -477,54 +476,11 @@ def train_classifier(dataset):
   df_predicted = df_extra[['pdb', 'residue_number', 'chain_id', 'label']]
   df_predicted['predicted'] = predicted
 
-  generate_pymols(df_predicted, is_extra_proteins=False)
+  if save_model:
+    file = f'trained_model_{mlp_model}.pkl'
+    joblib.dump(clf, open(file, 'wb'))
 
   return clf
-
-def generate_attention_maps(df, num_hidden_layers, num_attention_heads, model, tokenizer, mlp_model):
-  attentions_df = pd.DataFrame()
-  col_names = create_col_names(num_hidden_layers, num_attention_heads)
-
-  df['sequence'] = df.groupby(['pdb', 'chain_id'])['residue_1l'].transform(lambda x: ''.join(x))
-
-  # keep proteins with their sequences
-  proteins_with_seq = df[['pdb', 'sequence']].groupby('pdb').apply(lambda x: list(np.unique(x['sequence']))[0].replace('U','X').replace('Z','X').replace('O','X')).to_dict()
-
-  # prepare df with attention maps
-  for seq_idx, (pdb, seq) in tqdm(enumerate(proteins_with_seq.items())):
-      seq = seq
-      seq_len = len(seq)
-
-      if mlp_model == 'protTrans':
-        seq = ' '.join(list(seq)) # add space between each AA for protTrans model
-
-      token_encoding = tokenizer(seq, return_tensors='pt', add_special_tokens=False).to(device)
-
-      try:
-        with torch.no_grad():
-          embedding_repr = model(**token_encoding, output_attentions=True)
-
-      except RuntimeError:
-        print("RuntimeError during embedding for {} (L={})".format(pdb, seq_len))
-        continue
-      
-      attention_weights = format_attention_maps(embedding_repr.attentions)
-      # label = df[df.pdb == pdb]['label'].to_numpy()
-      # y = np.tile(label, (len(label), 1))
-
-      temp_df = pd.DataFrame(columns=col_names)
-      temp_df.insert(0, "pdb", df[df.pdb == pdb]['pdb'].values)
-      temp_df.insert(1, "chain_id", df[df.pdb == pdb]['chain_id'].values)
-      temp_df.insert(2, "residue_1l", df[df.pdb == pdb]['residue_1l'].values)
-      temp_df.insert(3, "residue_number", df[df.pdb == pdb]['residue_number'].values)
-      if 'label' in df.columns:
-        temp_df.insert(4, "label", df[df.pdb == pdb]['label'].values)
-      temp_df = create_att_maps_df(attention_weights, temp_df, num_hidden_layers, num_attention_heads)  
-
-      attentions_df = pd.concat([attentions_df, temp_df], ignore_index=True)
-  
-  attentions_df.to_csv(f"attentions_pdb_{dataset_type}_{dataset_att_type}_{mlp_model}.csv")
-
 
 # ---------------------------------------------------
 #                      Main
@@ -586,15 +542,6 @@ if __name__ == "__main__":
       df = create_embeddings_dataset(df, embeddings, num_hidden_size)
       save_dataset(df, project_path + f'/Datasets/PDB_dataset/pdb_dataset_{dataset_type}_{mlp_model}.csv')
 
-  elif mode =='generate_attentions':
-    print("--------------")
-    print("Starting generation of attentions for model", mlp_model )
-    print("--------------")
-    model, tokenizer, num_hidden_size, num_hidden_layers, num_attention_heads = load_model(mlp_model)
-    df = load_dataset(project_path + f'/Datasets/PDB_dataset/pdb_dataset_{dataset_type}_filtered.csv')
-
-    generate_attention_maps(df, num_hidden_layers, num_attention_heads, model, tokenizer, mlp_model)
-    
   elif mode == 'train_algorithm':
     print("--------------")
     print("Starting training of algorithms for model", mlp_model )
@@ -606,47 +553,24 @@ if __name__ == "__main__":
     df_res = pd.get_dummies(df['residue_1l'])
     df = df.merge(df_res, left_index=True, right_index=True, how='inner')
 
-    train_classifier(df)
-  
-  elif mode == "predict_extra_proteins":
-    # # Read extra proteins from file
-    # f = open("./Datasets/PDB_dataset/extra_proteins.json")
-    # extra_prot = json.load(f)["extra_prot"]
-    # f.close()
+    clf = train_classifier(df, save_model=True)
 
-    # # Get sequences of extra proteins and save it
-    # sequences = get_proteins_sequences(extra_prot)
+  elif mode == "predict_new_proteins":
+    clf = load_ml_model(f'/home/dimitra/master_thesis/models/lgbm_model_pdb_{mlp_model}.pkl')
     
-    # # Generate embeddings for extra proteins
-    # model, tokenizer, num_hidden_size, num_hidden_layers, num_attention_heads = load_model(mlp_model)
-    # generate_attention_maps(sequences, num_hidden_layers, num_attention_heads, model, tokenizer, mlp_model)
-   
-    # embeddings = generate_embeddings(sequences, model, tokenizer)
-    # df = create_embeddings_dataset(sequences, embeddings, num_hidden_size)
-    # save_dataset(df, project_path + f'/Datasets/PDB_dataset/pdb_dataset_extra_prot_{mlp_model}.csv')
-     
-    # Read dataframe with extra proteins
-    # df_extra = load_dataset(project_path + f'/Datasets/PDB_dataset/attentions_pdb_extra_prot_{dataset_att_type}_{mlp_model}.csv', index_col=0)
-    df_extra = load_dataset(project_path + f'/Datasets/PDB_dataset/pdb_dataset_extra_prot_{mlp_model}.csv')
+    sequence_df = get_proteins_sequences(new_proteins)
+    sequence_df['residue_1l'] = sequence_df['residue_name'].map(amino_acids_3l_key)
 
-    # df = load_dataset(project_path + f'/Datasets/PDB_dataset/attentions_pdb_{dataset_type}_{dataset_att_type}_{mlp_model}.csv', index_col=0)
-    df = load_dataset(project_path + f'/Datasets/PDB_dataset/pdb_dataset_{dataset_type}_{mlp_model}.csv')
-
-    # one-hot encode of residues
+    model, tokenizer, num_hidden_size, num_hidden_layers, num_attention_heads = load_model(mlp_model)
+    embeddings = generate_embeddings(sequence_df, model, tokenizer)
+    df = create_embeddings_dataset(sequence_df, embeddings, num_hidden_size)
+    
     df_res = pd.get_dummies(df['residue_1l'])
     df = df.merge(df_res, left_index=True, right_index=True, how='inner')
 
-    clf = train_classifier(df)
+    predicted = clf.predict(df.drop(['pdb', 'residue_1l', 'residue_number', 'chain_id', 'label'], axis=1, inplace=False).to_numpy())
 
-    # one-hot encode residues
-    df_res = pd.get_dummies(df_extra['residue_1l'])
-    df_extra = df_extra.merge(df_res, left_index=True, right_index=True, how='inner')
+    df_predicted = df[['pdb', 'residue_number', 'chain_id']]
+    df['predicted'] = predicted
 
-    predicted = clf.predict(df_extra.drop(['pdb', 'residue_1l', 'residue_number', 'chain_id'], axis=1, inplace=False).to_numpy())
-
-    df_predicted = df_extra[['pdb', 'residue_number', 'chain_id']]
-    df_extra['predicted'] = predicted
-
-    generate_pymols(df_extra, is_extra_proteins=True)
-
-   
+    generate_pymols(df, is_extra_proteins=True)

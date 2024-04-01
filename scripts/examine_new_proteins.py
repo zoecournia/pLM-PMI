@@ -8,7 +8,7 @@ from Bio.PDB.PDBParser import PDBParser
 from Bio.Align import substitution_matrices
 import json
 import keras
-# import wget
+import wget
 import os
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -22,19 +22,14 @@ amino_acids_1l_key = {'R': 'ARG', 'H': 'HIS', 'K': 'LYS', 'D': 'ASP', 'E': 'GLU'
                       'U': 'SEC', 'G': 'GLY', 'P': 'PRO', 'A': 'ALA', 'V': 'VAL', 'I': 'ILE', 'L': 'LEU', 'M': 'MET', 'F': 'PHE', 'Y': 'TYR', 'W': 'TRP'}
 
 # read proteins that we want to examine
-f = open('./extra_proteins/proteins.json')
+f = open('../extra_proteins/proteins.json')
 new_proteins = json.load(f)
 f.close()
 
-model_name = 'protTrans'
-threshold = 0.58  # for esm 0.55
-# 1024 for protTrans
-# 1280 for esm
-num_features = 1024
+model_name = 'protTrans' # 'protTrans' or 'esm'
+num_features = 1024 # 1024  for protTrans or 1280
 
 # Download all proteins - Uniprot + PDB
-
-
 def fetch_proteins():
     url_for_pdbs = "https://files.rcsb.org/download/"
     url_for_uniprot = "https://rest.uniprot.org/uniprotkb/"
@@ -252,7 +247,7 @@ def create_df_with_embeddings(proteins_df, embeddings, n_embeddings):
     return df_embeddings
 
 
-def predict_ibs(df_proteins, model_name, thres):
+def predict_ibs(df_proteins, model_name):
     model = keras.models.load_model('./models/best_model_' + model_name)
 
     df_res = pd.get_dummies(df_proteins['residue_1l'])
@@ -262,7 +257,7 @@ def predict_ibs(df_proteins, model_name, thres):
     ypred = model.predict(df_proteins.drop(
         ['uniprot_id', 'residue_1l'], axis=1, inplace=False))
 
-    return [1 if i > thres else 0 for i in ypred]
+    return [1 if i > 0.5 else 0 for i in ypred]
 
 
 def generate_pymol_scripts(df_proteins, aligned_proteins):
@@ -334,7 +329,7 @@ df_proteins_with_embeddings = create_df_with_embeddings(
     df_protein, embeddings, num_features)
 
 predicted_values = predict_ibs(
-    df_proteins_with_embeddings, model_name, threshold)
+    df_proteins_with_embeddings, model_name)
 
 df_proteins_with_embeddings['predicted'] = predicted_values
 
