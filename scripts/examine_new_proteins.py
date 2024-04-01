@@ -21,13 +21,18 @@ amino_acids_3l_key = {"ARG": "R", "HIS": "H", "LYS": "K", "ASP": "D", "GLU": "E"
 amino_acids_1l_key = {'R': 'ARG', 'H': 'HIS', 'K': 'LYS', 'D': 'ASP', 'E': 'GLU', 'S': 'SER', 'T': 'THR', 'N': 'ASN', 'Q': 'GLN', 'C': 'CYS',
                       'U': 'SEC', 'G': 'GLY', 'P': 'PRO', 'A': 'ALA', 'V': 'VAL', 'I': 'ILE', 'L': 'LEU', 'M': 'MET', 'F': 'PHE', 'Y': 'TYR', 'W': 'TRP'}
 
+# Fixed variables
+has_gpu = torch.cuda.is_available()
+device = "cuda" if torch.cuda.is_available() else "cpu"
+num_hidden_size = 0 # 1024  for protTrans or 1280 - will be set automatically
+
+# Variables to define
+model_name = 'protTrans' # 'protTrans' or 'esm'
+
 # read proteins that we want to examine
 f = open('../extra_proteins/proteins.json')
 new_proteins = json.load(f)
 f.close()
-
-model_name = 'protTrans' # 'protTrans' or 'esm'
-num_features = 1024 # 1024  for protTrans or 1280
 
 # Download all proteins - Uniprot + PDB
 def fetch_proteins():
@@ -129,91 +134,54 @@ def get_proteins_with_sequence(proteins_dict: dict, return_df):
         return temp_dict
 
 
-def generate_embeddings(proteins_df, model_name):
+def generate_embeddings(proteins_df, mlp_model):
     results = dict()
 
-    if model_name == 'protTrans':
-        tokenizer = T5Tokenizer.from_pretrained(
-            'Rostlab/prot_t5_xl_half_uniref50-enc', do_lower_case=False)
-        model = T5EncoderModel.from_pretrained(
-            "Rostlab/prot_t5_xl_half_uniref50-enc", torch_dtype=torch.float16)
-        # Currently (06/2022) half-precision models cannot be used on CPU. If you want to use the encoder only version on CPU, you need to cast it to its full-precision version (model=model.float())
-        model = model.float()
-
-        proteins_with_seq = proteins_df[['uniprot_id', 'sequence']].groupby('uniprot_id').apply(lambda x: list(np.unique(x['sequence']))[
-            0].replace('U', 'X').replace('Z', 'X').replace('O', 'X')).to_dict()
-
-        # sort sequences according to length (reduces unnecessary padding --> speeds up embedding)
-        seq_dict = sorted(proteins_with_seq.items(), key=lambda kv: len(
-            proteins_with_seq[kv[0]]), reverse=True)
-
-        for seq_idx, tup in enumerate(seq_dict):
-            pdb_id = tup[0]
-            seq = tup[1]
-            seq_len = len(seq)
-            seq = ' '.join(list(seq))  # add space between each AA
-
-            # add_special_tokens adds extra token at the end of each sequence
-            token_encoding = tokenizer.batch_encode_plus(
-                seq, add_special_tokens=True, padding="longest")
-            input_ids = torch.tensor(token_encoding['input_ids'])
-            attention_mask = torch.tensor(
-                token_encoding['attention_mask'])
-
-            try:
-                with torch.no_grad():
-                    # returns: ( batch-size x max_seq_len_in_minibatch x embedding_dim )
-                    embedding_repr = model(
-                        input_ids, attention_mask=attention_mask)
-            except RuntimeError:
-                print("RuntimeError during embedding for {} (L={})".format(
-                    pdb_id, seq_len))
-                continue
-
-            # slice off padding --> batch-size x seq_len x embedding_dim
-            embedding = np.asarray(embedding_repr.last_hidden_state)
-
-            features = []
-            for seq_num in range(len(embedding)):
-                seq_len = (attention_mask[seq_num] == 1).sum()
-                seq_emd = embedding[seq_num][:seq_len-1]
-                if len(seq_emd) != 0:
-                    features.append(seq_emd)
-            # store per-residue embeddings (Lx1024)
-            results[pdb_id] = features
+    if mlp_model == 'protTrans':
+        tokenizer = T5Tokenizer.from_pretrained('Rostlab/prot_t5_xl_half_uniref50-enc', do_lower_case=False)
+        model = T5EncoderModel.from_pretrained("Rostlab/prot_t5_xl_half_uniref50-enc", torch_dtype=torch.float16)
+        model = model.to(torch.float32)
     else:
-        tokenizer = EsmTokenizer.from_pretrained(
-            "facebook/esm2_t33_650M_UR50D", do_lower_case=False)
+        tokenizer = EsmTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D", do_lower_case=False)
         model = EsmModel.from_pretrained("facebook/esm2_t33_650M_UR50D")
 
-        proteins_with_seq = proteins_df[['uniprot_id', 'sequence']].groupby('uniprot_id').apply(lambda x: list(np.unique(x['sequence']))[
-            0].replace('U', 'X').replace('Z', 'X').replace('O', 'X')).to_dict()
+    # load model to GPU
+    model = model.to(device)
 
-        # sort sequences according to length (reduces unnecessary padding --> speeds up embedding)
-        seq_dict = sorted(proteins_with_seq.items(), key=lambda kv: len(
-            proteins_with_seq[kv[0]]), reverse=True)
-        results = dict()
+    # Get the number of embeddings
+    num_hidden_size = model.config.hidden_size
 
-        for seq_idx, tup in enumerate(seq_dict):
-            pdb_id = tup[0]
-            seq = tup[1]
-            seq_len = len(seq)
+    proteins_with_seq = proteins_df[['uniprot_id', 'sequence']].groupby('uniprot_id').apply(lambda x: list(np.unique(x['sequence']))[
+        0].replace('U', 'X').replace('Z', 'X').replace('O', 'X')).to_dict()
 
-            # add_special_tokens adds extra token at the end of each sequence
-            token_encoding = tokenizer(seq, return_tensors="pt")
+    # sort sequences according to length (reduces unnecessary padding --> speeds up embedding)
+    seq_dict = sorted(proteins_with_seq.items(), key=lambda kv: len(
+        proteins_with_seq[kv[0]]), reverse=True)
+    
+    for seq_idx, (pdb_id, seq) in enumerate(seq_dict,1):
+        seq = seq
+        seq_len = len(seq)
 
-            try:
-                with torch.no_grad():
-                    # returns: ( batch-size x max_seq_len_in_minibatch x embedding_dim )
-                    embedding_repr = model(**token_encoding)
-            except RuntimeError:
-                print("RuntimeError during embedding for {} (L={})".format(
-                    pdb_id, seq_len))
-                continue
+        # get also the chain_id of the specific sequence, by matching the pdb_id and the sequence
+        chain_id = proteins_df[(proteins_df['pdb'] == pdb_id) & (proteins_df['sequence'] == seq)].chain_id.unique()[0]
 
-            emb = embedding_repr.last_hidden_state[:, :seq_len]
-            # store per-residue embeddings (Lx1024)
-            results[pdb_id] = emb.detach().cpu().numpy().squeeze()
+        if mlp_model == 'protTrans':
+            seq = ' '.join(list(seq)) # add space between each AA for protTrans model
+
+        # Tokenize the sequence
+        token_encoding = tokenizer(seq, return_tensors="pt", add_special_tokens=False).to(device)
+
+        try:
+            with torch.no_grad():
+                embedding_repr = model(**token_encoding)
+
+        except RuntimeError:
+            print("RuntimeError during embedding for {} (L={})".format(pdb_id, seq_len))
+            continue
+        
+        # Save the embeddings
+        results[pdb_id] = {}
+        results[pdb_id][chain_id] = embedding_repr.last_hidden_state.detach().cpu().numpy().squeeze()
 
     return results
 
@@ -326,7 +294,7 @@ df_protein = get_proteins_with_sequence(proteins_alignment, return_df=True)
 embeddings = generate_embeddings(df_protein, model_name)
 
 df_proteins_with_embeddings = create_df_with_embeddings(
-    df_protein, embeddings, num_features)
+    df_protein, embeddings, num_hidden_size)
 
 predicted_values = predict_ibs(
     df_proteins_with_embeddings, model_name)

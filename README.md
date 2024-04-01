@@ -13,11 +13,10 @@ Contains the 2 datasets (DREAMM & PePr2DS) that we used to create our own, as we
 - Uniprot_dataset -> contains the dataset with the Uniprot sequences
 
 **models/**
-Contains the 4 best fine-tuned MLP models trained on protTrans and ESM embeddings.
+Contains the 2 best fine-tuned MLP models trained on protTrans and ESM embeddings in Uniprot sequences and the 2 best fine-tuned LGBM models trained on protTrans and ESM embeddings in PDB sequences.
 
-- 2 MLP models with 4 hidden layers (best_model_esm, best_model_protTrans)
-- 2 MLP models optimized with Optuna framework (best_model_esm_new, best_model_protTrans_new)
-- 2 LGBM models trianed on PDB datasets optimized with Optuna framework
+- 2 MLP models optimized with Optuna framework (best_model_esm, best_model_protTrans) - for Uniprot dataset
+- 2 LGBM models trianed on PDB datasets optimized with Optuna framework - for PDB dataset
 
 **scripts/**
 Contains several project's scripts.
@@ -31,11 +30,24 @@ Contains several project's scripts.
 
 ### How to run the scripts
 
-For the case of Uniprot sequences, to predict new proteins using the MLP models:
+First of all, you will need `Python >= 3.9` and a conda environment to install all the appropriate libraries by running:
+
+```
+# 1. activate the environment
+conda activate my_env
+
+# 2. install all the depedences
+pip install -r requirements. txt
+
+# 3. run a script ex.
+python scripts/dataset-pdb.py
+```
+
+For the case of Uniprot sequences, to predict membrane interacting amino acids for new proteins using the MLP models:
 
 1. Edit the _proteins.json file_ in the **extra_proteins** folder where you set the Uniprot code and the matching PDB code and chain id for the visualization.
-2. In the **examine_new_proteins.py** set the _model_name_ to be esm or protTrans that defines the language model that you want to use and then set the _num_features_ to be 1024 or 1280 according to the pLM that you selected.
+2. In the **examine_new_proteins.py** set the _model_name_ to be 'esm' or 'protTrans' that defines the language model that you want to use.
 
-For the case of PDB sequences, to predict new proteins using the LGBM models:
+For the case of PDB sequences, to predict membrane interacting amino acids for new proteins using the LGBM models:
 
-1. Edit the _mode_ to be 'predict_new_proteins', set the _mlp_model_ with the desire pLM model (esm or protTrans), and add the PDB codes in the variable _new_proteins_ that you want to examine in the **dataset-pdb.py** script.
+1. Edit the _mode_ to be 'predict*new_proteins', set the *mlp_model* with the desire pLM model ('esm' or 'protTrans'), and add the PDB codes in the variable *new_proteins\* that you want to examine in the **dataset-pdb.py** script.

@@ -1,0 +1,15 @@
+pandas
+numpy 
+matplotlib
+xgboost
+lightgbm
+scikit-learn
+transformers
+torch
+biopython
+keras
+wget
+ssl
+seaborn
+tqdm
+optuna

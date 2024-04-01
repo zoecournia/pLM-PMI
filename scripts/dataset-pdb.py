@@ -237,7 +237,7 @@ def load_model(mlp_model):
   # load model to GPU
   model = model.to(device)
 
-  # Get the number of hidden layers and attention heads
+  # Get the number of embeddings
   num_hidden_size = model.config.hidden_size
   # Get the number of hidden layers and attention heads
   num_hidden_layers = model.config.num_hidden_layers
