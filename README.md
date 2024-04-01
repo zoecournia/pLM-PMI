@@ -25,6 +25,5 @@ Contains several project's scripts.
 - embeddings_lm.py -> Extract the embeddings of 2 pLMs so as to use them as features for the Uniprot dataset
 - explore_datasets.ipynb -> Explore and create the dataset files for Uniprot sequences
 - get_proteins.py -> Scirpt for downloading proteins from Uniprot / PDB
-- mlp_tune.ipynb -> Fine-tuning of MLP using Bayesian Optimization and keras tuner
 - ml_tune.ipynb -> Fine-tuning of 5 ML classifiers - LGBM, XGBoost, BalancedRandomForest, Single layer Perceptron, Multi layer Perceptron - using Optuna library
 - pairwise_seq_ident.py -> Create a file with the alignments of proteins
