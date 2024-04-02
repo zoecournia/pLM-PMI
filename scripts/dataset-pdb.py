@@ -73,6 +73,11 @@ def read_dreamm(file_path):
   # create a dataframe from the json file with dreamm labeling
   dreamm_df = pd.DataFrame()
   for pdb in dreamm:
+      # Add the pdbs with no membrane-penetrating residues
+      if len(dreamm[pdb]) == 0:
+        new_row_df = pd.DataFrame({'pdb': pdb.upper(), 'chain_id': 'A', 'residue_name': '', 'residue_number': '', 'label': False}, index=[0])
+        dreamm_df = pd.concat([dreamm_df, new_row_df], ignore_index=True)
+      
       for residue in dreamm[pdb]:
           # check if pdb has >4 characters - case of different chains ex. 1a2y_A, 
           if len(pdb) > 4:
@@ -134,6 +139,9 @@ def concatenate_datasets(pepr_dataset, dreamm_df):
   # Find pdbs of dreamm that are not in pepr
   pdbs_not_in_pepr = dreamm_df[~dreamm_df['pdb'].isin(pepr_dataset['pdb'])]
 
+  # Remove the pdbs from dreamm that are in the same_pdbs
+  dreamm_df = dreamm_df[~dreamm_df['pdb'].isin(same_pdbs['pdb'])]
+
   # Merge the two datasets
   merged_dataset = pd.concat([pepr_dataset, dreamm_df], ignore_index=True)
 
@@ -154,6 +162,12 @@ def add_false_labels(dataset):
     pdb_with_all_true_labels = dataset.groupby(['pdb', 'chain_id']).apply(lambda group: all(group['label'])).reset_index(name='all_true_labels')
     result_pdb_list = pdb_with_all_true_labels[pdb_with_all_true_labels['all_true_labels']]['pdb'].tolist()
     
+    # get the pdbs that have empty residues
+    empty_residues = dataset[dataset['residue_name'] == '']
+
+    # add the pdbs with empty residues to the result_pdb_list
+    result_pdb_list = result_pdb_list + empty_residues['pdb'].unique().tolist()
+
     for pdb in result_pdb_list:
         pdbl = PDBList()
         pdbl.retrieve_pdb_file(pdb, pdir = 'pdbs/', file_format = 'pdb')
@@ -179,6 +193,9 @@ def add_false_labels(dataset):
                               (dataset['residue_name'] == residue.get_resname())].empty:
                     new_row_df = pd.DataFrame({'pdb': pdb, 'chain_id': chain.get_id(), 'residue_name': residue.get_resname(), 'residue_number': residue.get_id()[1], 'label': False}, index=[0])
                     dataset = pd.concat([dataset, new_row_df], ignore_index=True)
+
+    # remove raws with empty residue_name
+    dataset = dataset[dataset['residue_name'] != '']
 
     # sort the dataset by pdb, chain_id and residue_number
     dataset = dataset.sort_values(['pdb', 'chain_id', 'residue_number']).reset_index(drop=True)
