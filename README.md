@@ -37,9 +37,9 @@ First of all, you will need `Python >= 3.9` and a conda environment to install a
 conda activate my_env
 
 # 2. install all the depedences
-pip install -r requirements. txt
+pip install -r requirements.txt
 
-# 3. run a script ex.
+# 3. run a script
 python scripts/dataset-pdb.py
 ```
 
@@ -50,4 +50,4 @@ For the case of Uniprot sequences, to predict membrane interacting amino acids f
 
 For the case of PDB sequences, to predict membrane interacting amino acids for new proteins using the LGBM models:
 
-1. Edit the _mode_ to be 'predict*new_proteins', set the *mlp_model* with the desire pLM model ('esm' or 'protTrans'), and add the PDB codes in the variable *new_proteins\* that you want to examine in the **dataset-pdb.py** script.
+1. Edit the _mode_ to be 'predict_new_proteins', set the *mlp_model* with the desire pLM model ('esm' or 'protTrans'), and add the PDB codes in the variable *new_proteins* that you want to examine in the **dataset-pdb.py** script.
